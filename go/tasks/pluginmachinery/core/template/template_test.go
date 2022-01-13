@@ -75,6 +75,17 @@ func TestReplaceTemplateCommandArgs(t *testing.T) {
 	taskMetadata := &pluginsCoreMocks.TaskExecutionMetadata{}
 	taskMetadata.On("GetTaskExecutionID").Return(taskExecutionID)
 
+	wfExecId := &core.WorkflowExecutionIdentifier{
+		Project: "flying",
+		Domain:  "circus",
+	}
+	nodeExecId := &core.NodeExecutionIdentifier{
+		ExecutionId: wfExecId,
+	}
+	taskExecutionID.On("GetID").Return(core.TaskExecutionIdentifier{
+		NodeExecutionId: nodeExecId,
+	})
+
 	t.Run("empty cmd", func(t *testing.T) {
 		actual, err := Render(context.TODO(), []string{}, Parameters{})
 		assert.NoError(t, err)
@@ -569,6 +580,34 @@ func TestReplaceTemplateCommandArgs(t *testing.T) {
 			"--checkpoint=s3://new-checkpoint/prefix",
 		}, actual)
 	})
+
+	t.Run("Sub project and domain", func(t *testing.T) {
+		params := Parameters{
+			TaskExecMetadata: taskMetadata,
+			Inputs:           in,
+			OutputPath: dummyOutputPaths{
+				outputPath:          out.outputPath,
+				rawOutputDataPrefix: out.rawOutputDataPrefix,
+				prevCheckpointPath:  "s3://prev-checkpoint/prefix",
+				checkpointPath:      "s3://new-checkpoint/prefix",
+			},
+		}
+		actual, err := Render(context.TODO(), []string{
+			"welcome",
+			"to",
+			"the",
+			"{{ .Project }}",
+			"{{ .Domain }}",
+		}, params)
+		assert.NoError(t, err)
+		assert.Equal(t, []string{
+			"welcome",
+			"to",
+			"the",
+			"flying",
+			"circus",
+		}, actual)
+	})
 }
 
 func TestReplaceTemplateCommandArgsSpecialChars(t *testing.T) {
@@ -585,6 +624,17 @@ func TestReplaceTemplateCommandArgsSpecialChars(t *testing.T) {
 		taskExecutionID.On("GetGeneratedName").Return("per-retry-unique-key")
 		taskMetadata := &pluginsCoreMocks.TaskExecutionMetadata{}
 		taskMetadata.On("GetTaskExecutionID").Return(taskExecutionID)
+
+		wfExecId := &core.WorkflowExecutionIdentifier{
+			Project: "flying",
+			Domain:  "circus",
+		}
+		nodeExecId := &core.NodeExecutionIdentifier{
+			ExecutionId: wfExecId,
+		}
+		taskExecutionID.On("GetID").Return(core.TaskExecutionIdentifier{
+			NodeExecutionId: nodeExecId,
+		})
 
 		params.TaskExecMetadata = taskMetadata
 		actual, err := Render(context.TODO(), []string{
@@ -608,6 +658,17 @@ func TestReplaceTemplateCommandArgsSpecialChars(t *testing.T) {
 		taskExecutionID.On("GetGeneratedName").Return("33 per retry-unique-key")
 		taskMetadata := &pluginsCoreMocks.TaskExecutionMetadata{}
 		taskMetadata.On("GetTaskExecutionID").Return(taskExecutionID)
+
+		wfExecId := &core.WorkflowExecutionIdentifier{
+			Project: "flying",
+			Domain:  "circus",
+		}
+		nodeExecId := &core.NodeExecutionIdentifier{
+			ExecutionId: wfExecId,
+		}
+		taskExecutionID.On("GetID").Return(core.TaskExecutionIdentifier{
+			NodeExecutionId: nodeExecId,
+		})
 
 		params.TaskExecMetadata = taskMetadata
 		testString := "doesn't start with a number"

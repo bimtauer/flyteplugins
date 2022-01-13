@@ -16,6 +16,8 @@
 // - {{ .PrevCheckpointPrefix }} A path to the checkpoint directory for the previous attempt. If this is the first attempt
 //     then this is replaced by an empty string
 // - {{ .CheckpointOutputPrefix }} A Flyte aware path where the current execution should write the checkpoints.
+// - {{ .Project }} The project that a task belongs to.
+// - {{ .Domain }} The domain under which a task is currently executed.
 package template
 
 import (
@@ -46,6 +48,8 @@ var perRetryUniqueKey = regexp.MustCompile(`(?i){{\s*[\.$]PerRetryUniqueKey\s*}}
 var taskTemplateRegex = regexp.MustCompile(`(?i){{\s*[\.$]TaskTemplatePath\s*}}`)
 var prevCheckpointPrefixRegex = regexp.MustCompile(`(?i){{\s*[\.$]PrevCheckpointPrefix\s*}}`)
 var currCheckpointPrefixRegex = regexp.MustCompile(`(?i){{\s*[\.$]CheckpointOutputPrefix\s*}}`)
+var projectRegex = regexp.MustCompile(`(?i){{\s*[\.$]Project\s*}}`)
+var domainRegex = regexp.MustCompile(`(?i){{\s*[\.$]Domain\s*}}`)
 
 type ErrorCollection struct {
 	Errors []error
@@ -102,11 +106,16 @@ func Render(ctx context.Context, inputTemplate []string, params Parameters) ([]s
 }
 
 func render(ctx context.Context, inputTemplate string, params Parameters, perRetryKey string) (string, error) {
+	execId := params.TaskExecMetadata.GetTaskExecutionID().GetID().NodeExecutionId.GetExecutionId()
+	project := execId.GetProject()
+	domain := execId.GetDomain()
 
 	val := inputFileRegex.ReplaceAllString(inputTemplate, params.Inputs.GetInputPath().String())
 	val = outputRegex.ReplaceAllString(val, params.OutputPath.GetOutputPrefixPath().String())
 	val = inputPrefixRegex.ReplaceAllString(val, params.Inputs.GetInputPrefixPath().String())
 	val = rawOutputDataPrefixRegex.ReplaceAllString(val, params.OutputPath.GetRawOutputPrefix().String())
+	val = projectRegex.ReplaceAllString(val, project)
+	val = domainRegex.ReplaceAllString(val, domain)
 	prevCheckpoint := params.OutputPath.GetPreviousCheckpointsPrefix().String()
 	if prevCheckpoint == "" {
 		prevCheckpoint = "\"\""
